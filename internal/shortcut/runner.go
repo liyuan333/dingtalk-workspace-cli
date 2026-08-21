@@ -133,12 +133,7 @@ func (rt *RuntimeContext) CallMCP(tool string, params map[string]any) error {
 	}
 	if output.UsesUnifiedResult(rt.cmd) {
 		if rt.DryRun() {
-			return rt.Output(map[string]any{
-				"dry_run":   true,
-				"executed":  false,
-				"tool":      tool,
-				"arguments": params,
-			})
+			return rt.Output(dryRunPreviewPayload(tool, params))
 		}
 		data, err := helpers.CallMCPToolDataOnServer(rt.cmd.Context(), rt.shortcut.product(), tool, params)
 		if err != nil {
@@ -147,12 +142,7 @@ func (rt *RuntimeContext) CallMCP(tool string, params map[string]any) error {
 		return rt.storePayload(tool, data)
 	}
 	if output.CommandRollout(rt.cmd) == output.RolloutDualValidate {
-		preview := any(map[string]any{
-			"dry_run":   true,
-			"executed":  false,
-			"tool":      tool,
-			"arguments": params,
-		})
+		preview := any(dryRunPreviewPayload(tool, params))
 		if rt.DryRun() {
 			if err := validateShadowResult(rt.resultForPayload(tool, preview)); err != nil {
 				return err
@@ -176,6 +166,20 @@ func (rt *RuntimeContext) CallMCP(tool string, params map[string]any) error {
 		return helpers.RenderLegacyMCPText(tool, text)
 	}
 	return helpers.CallMCPToolOnServer(rt.shortcut.product(), tool, params)
+}
+
+// dryRunPreviewPayload is the single preview shape for shortcut dry-run
+// paths. Credential-bearing argument values (for example a document access
+// password) are replaced by a fixed mask before the preview leaves the
+// business boundary; params itself keeps authentic values for the real MCP
+// call path.
+func dryRunPreviewPayload(tool string, params map[string]any) map[string]any {
+	return map[string]any{
+		"dry_run":   true,
+		"executed":  false,
+		"tool":      tool,
+		"arguments": helpers.MaskSensitivePreviewArgs(params),
+	}
 }
 
 func legacyMCPPayload(text string) any {

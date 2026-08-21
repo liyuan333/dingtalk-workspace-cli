@@ -345,21 +345,23 @@ func MustGetStringFlag(cmd *cobra.Command, name string) string {
 func callMCPToolInternalOpts(explicitServerID, toolName string, args map[string]any, unescapeHTML bool) error {
 	ctx := context.Background()
 
-	// DryRun 模式：仅预览工具名和参数，不实际调用 MCP Server
+	// DryRun 模式：仅预览工具名和参数，不实际调用 MCP Server。
+	// 预览对敏感键（如 password）做固定掩码，真实调用路径仍使用原值。
 	if deps.Caller.DryRun() {
+		preview := MaskSensitivePreviewArgs(args)
 		if deps.Caller.Format() == "json" {
 			return deps.Out.PrintJSON(map[string]any{
 				"dry_run":   true,
 				"executed":  false,
 				"tool":      toolName,
-				"arguments": args,
+				"arguments": preview,
 			})
 		}
 		bold := color.New(color.FgYellow, color.Bold)
 		bold.Println("[DRY-RUN] Preview only, not executed:")
 		deps.Out.PrintKeyValue("Tool", toolName)
-		if args != nil {
-			argsJSON, _ := json.MarshalIndent(args, "  ", "  ")
+		if preview != nil {
+			argsJSON, _ := json.MarshalIndent(preview, "  ", "  ")
 			deps.Out.PrintKeyValue("Arguments", "\n  "+string(argsJSON))
 		}
 		return nil

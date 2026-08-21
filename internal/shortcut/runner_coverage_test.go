@@ -25,6 +25,21 @@ func TestCrossPlatformCoverageRuntimeContextForTest(t *testing.T) {
 	}
 }
 
+func TestCrossPlatformCoverageDryRunPreviewPayloadMasksSensitiveArguments(t *testing.T) {
+	params := map[string]any{"nodeId": "doc-1", "password": "pw-secret"}
+	payload := dryRunPreviewPayload("get_document_content", params)
+	if payload["dry_run"] != true || payload["executed"] != false || payload["tool"] != "get_document_content" {
+		t.Fatalf("preview payload shape = %#v", payload)
+	}
+	arguments, ok := payload["arguments"].(map[string]any)
+	if !ok || arguments["password"] != "[REDACTED]" || arguments["nodeId"] != "doc-1" {
+		t.Fatalf("preview arguments = %#v", payload["arguments"])
+	}
+	if params["password"] != "pw-secret" {
+		t.Fatalf("real call params mutated: %#v", params)
+	}
+}
+
 func TestShortcutCommandResultRejectsStringSuccess(t *testing.T) {
 	result := shortcutCommandResult(map[string]any{"success": "false"})
 	env, err := output.EnvelopeFromResult(result)

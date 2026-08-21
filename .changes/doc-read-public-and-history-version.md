@@ -10,4 +10,7 @@ category: Added
   `--password` and `--version` with the same `historyVersion` forwarding, while
   `--revision` stays rejected with explicit guidance: revision is the document
   edit revision returned by JSONML reads for `+update --expected-revision`
-  conditional writes, not a historical version number.
+  conditional writes, not a historical version number. Dry-run previews mask
+  credential-bearing arguments such as `password` with a fixed `[REDACTED]`
+  placeholder in both structured and text output; the real MCP call keeps the
+  authentic values.
