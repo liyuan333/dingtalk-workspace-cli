@@ -14,6 +14,7 @@
 package shortcut
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -150,9 +151,9 @@ func (rt *RuntimeContext) CallMCP(tool string, params map[string]any) error {
 			// The legacy caller owns dry-run presentation (including its human
 			// preview for non-JSON formats) and does not cross the business-call
 			// boundary. Keep using it so dual validation changes no bytes.
-			return helpers.CallMCPToolOnServer(rt.shortcut.product(), tool, params)
+			return helpers.CallMCPToolOnServerContext(rt.commandContext(), rt.shortcut.product(), tool, params)
 		}
-		text, err := helpers.CallMCPToolTextOnServer(rt.shortcut.product(), tool, params)
+		text, err := helpers.CallMCPToolTextOnServerContext(rt.commandContext(), rt.shortcut.product(), tool, params)
 		if err != nil {
 			return err
 		}
@@ -165,7 +166,7 @@ func (rt *RuntimeContext) CallMCP(tool string, params map[string]any) error {
 		// shadow unified result.
 		return helpers.RenderLegacyMCPText(tool, text)
 	}
-	return helpers.CallMCPToolOnServer(rt.shortcut.product(), tool, params)
+	return helpers.CallMCPToolOnServerContext(rt.commandContext(), rt.shortcut.product(), tool, params)
 }
 
 // dryRunPreviewPayload is the single preview shape for shortcut dry-run
@@ -260,7 +261,7 @@ func (rt *RuntimeContext) callMCPData(product, tool string, params map[string]an
 	if params == nil {
 		params = map[string]any{}
 	}
-	text, err := helpers.CallMCPToolTextOnServer(product, tool, params)
+	text, err := helpers.CallMCPToolTextOnServerContext(rt.commandContext(), product, tool, params)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +279,7 @@ func (rt *RuntimeContext) callMCPReadData(product, tool string, params map[strin
 	if params == nil {
 		params = map[string]any{}
 	}
-	text, err := helpers.CallMCPReadToolTextOnServer(product, tool, params)
+	text, err := helpers.CallMCPReadToolTextOnServerContext(rt.commandContext(), product, tool, params)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +297,7 @@ func (rt *RuntimeContext) callMCPWriteData(product, tool string, params map[stri
 	if params == nil {
 		params = map[string]any{}
 	}
-	text, err := helpers.CallMCPToolTextOnServer(product, tool, params)
+	text, err := helpers.CallMCPToolTextOnServerContext(rt.commandContext(), product, tool, params)
 	if err != nil {
 		return nil, err
 	}
@@ -314,6 +315,13 @@ func (rt *RuntimeContext) callMCPWriteData(product, tool string, params map[stri
 		return nil, apperrors.NewInternal(fmt.Sprintf("解析 %s 返回失败: %v", tool, err))
 	}
 	return out, nil
+}
+
+func (rt *RuntimeContext) commandContext() context.Context {
+	if rt != nil && rt.cmd != nil && rt.cmd.Context() != nil {
+		return rt.cmd.Context()
+	}
+	return context.Background()
 }
 
 // Output prints a (typically reshaped/projected) payload honouring the root
